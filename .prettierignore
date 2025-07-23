@@ -1,0 +1,16 @@
+node_modules/
+artifacts/
+cache/
+coverage/
+typechain/
+typechain-types/
+dist/
+build/
+.env
+.env.local
+.env.production
+.env.staging
+*.log
+package-lock.json
+yarn.lock
+pnpm-lock.yaml 
