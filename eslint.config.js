@@ -52,7 +52,13 @@ module.exports = [
       },
     },
   },
-
+  {
+    // 允许测试文件使用 console
+    files: ['test/**/*.js', 'scripts/**/*.js', 'hardhat.config.js'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
   {
     // 忽略文件
     ignores: [
