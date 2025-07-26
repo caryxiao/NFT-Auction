@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 // 已部署的测试地址: https://sepolia.etherscan.io/address/0x18303e1e6b11a7b6cf566bca5186b397e8b60fc6
 pragma solidity ^0.8.30;
+
 import '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
-import { Strings } from '@openzeppelin/contracts/utils/Strings.sol';
+import {Strings} from '@openzeppelin/contracts/utils/Strings.sol';
+
 contract DDNFT is ERC721Upgradeable, OwnableUpgradeable {
     using Strings for uint256;
     uint256 private _tokenCounter;
@@ -31,6 +33,7 @@ contract DDNFT is ERC721Upgradeable, OwnableUpgradeable {
         _safeMint(to, tokenId);
         emit Mint(to, tokenId); // 触发 Mint 事件
     }
+
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
         _requireOwned(tokenId);
         string memory baseURI = _baseURI();

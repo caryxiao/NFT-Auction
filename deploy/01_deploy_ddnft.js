@@ -1,4 +1,16 @@
+/**
+ * @typedef {import('@openzeppelin/hardhat-upgrades').HardhatUpgrades} HardhatUpgrades
+ */
+
 const { getNamedAccounts, deployments, ethers, upgrades } = require('hardhat');
+
+/**
+ * @type {HardhatUpgrades} upgrades - Hardhat Upgrades 插件对象
+ * @property {Object} erc1967 - ERC1967 代理工具
+ * @property {function(string): Promise<string>} erc1967.getImplementationAddress - 获取代理的实现合约地址
+ * @property {function(string): Promise<string>} erc1967.getAdminAddress - 获取代理的管理员地址
+ * @property {function(string): Promise<string>} erc1967.getBeaconAddress - 获取代理的信标地址
+ */
 
 module.exports = async () => {
   const { log, save } = deployments;
