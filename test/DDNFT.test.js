@@ -5,12 +5,12 @@ describe('DDNFT 合约', () => {
   let ddnft;
   // eslint-disable-next-line no-unused-vars
   let managerSigner, user1Signer, user2Signer;
-  let managerAddress, user1Address, user2Address;
+  let managerAddress, user1Address, user2Address, proxyAddress;
 
   // beforeEach 保证每个测试都有一个纯净的环境。
   beforeEach(async () => {
-    // 使用 'DDNFT' 标签部署合约
-    await deployments.fixture(['DDNFT']);
+    // 使用 'ddnftv2' 标签部署合约
+    await deployments.fixture(['ddnftv2']);
 
     // 获取账户和签名者
     ({
@@ -21,20 +21,21 @@ describe('DDNFT 合约', () => {
     managerSigner = await ethers.getSigner(managerAddress);
     user1Signer = await ethers.getSigner(user1Address);
     user2Signer = await ethers.getSigner(user2Address);
-
+    const proxyDeployment = await deployments.get('DDNFTProxy');
+    proxyAddress = proxyDeployment.address;
     // 获取连接到 manager 的主合约实例
-    ddnft = await ethers.getContract('DDNFT', managerSigner);
+    ddnft = await ethers.getContractAt('DDNFTV2', proxyAddress, managerSigner);
   });
 
   describe('部署', () => {
-    it('应设置正确的 manager', async () => {
-      // 测试私有变量 'manager' 的唯一方法是检查其权限。
-      await expect(ddnft.safeMint(managerAddress)).to.not.be.reverted;
+    it('应设置正确的 owner', async () => {
+      expect(await ddnft.owner()).to.equal(managerAddress);
     });
 
-    it('应有正确的名称和符号', async () => {
+    it('应有正确的名称,符号,版本', async () => {
       expect(await ddnft.name()).to.equal('DD NFT');
       expect(await ddnft.symbol()).to.equal('DDN');
+      expect(await ddnft.version()).to.equal('2');
     });
   });
 
@@ -44,11 +45,11 @@ describe('DDNFT 合约', () => {
       expect(await ddnft.balanceOf(user1Address)).to.equal(1);
     });
 
-    it('如果非 manager 尝试铸造，则应失败', async () => {
-      // 将合约连接到 'user' 签名者，以模拟来自该账户的调用
+    it('如果非 owner 尝试铸造，则应失败', async () => {
+      // 将合约连接到 'user1' 签名者，以模拟来自该账户的调用
       await expect(
         ddnft.connect(user1Signer).safeMint(user1Address)
-      ).to.be.revertedWith('Caller is not Manager');
+      ).to.be.revertedWithCustomError(ddnft, 'OwnableUnauthorizedAccount');
     });
 
     it('应按顺序递增代币 ID', async () => {
@@ -63,9 +64,13 @@ describe('DDNFT 合约', () => {
   });
 
   describe('授权管理 NFT', () => {
-    it('应允许 manager 授权一个 NFT, 并且 manager 可以转移 NFT', async () => {
+    it('应允许 owner 授权一个 NFT, 并且 owner 可以转移 NFT', async () => {
       // 获取user连接到合约
-      const ddnftUser1 = await ethers.getContract('DDNFT', user1Signer);
+      const ddnftUser1 = await ethers.getContractAt(
+        'DDNFTV2',
+        proxyAddress,
+        user1Signer
+      );
       await ddnft.safeMint(user1Address);
       await ddnft.safeMint(managerAddress);
       // user授权manager管理NFT
@@ -90,6 +95,30 @@ describe('DDNFT 合约', () => {
     it('对于不存在的代币应调用失败', async () => {
       // 预料到调用会失败，因为代币 999 不存在
       await expect(ddnft.tokenURI(999)).to.be.reverted;
+    });
+  });
+
+  describe('Pausable 功能 (V2)', () => {
+    it('应允许 owner 暂停和取消暂停合约', async () => {
+      await ddnft.pause();
+      expect(await ddnft.paused()).to.be.true;
+
+      await ddnft.unpause();
+      expect(await ddnft.paused()).to.be.false;
+    });
+
+    it('如果非 owner 尝试暂停，则应失败', async () => {
+      await expect(
+        ddnft.connect(user1Signer).pause()
+      ).to.be.revertedWithCustomError(ddnft, 'OwnableUnauthorizedAccount');
+    });
+
+    it('在暂停时应阻止 safeMint', async () => {
+      await ddnft.pause();
+      await expect(ddnft.safeMint(user1Address)).to.be.revertedWithCustomError(
+        ddnft,
+        'EnforcedPause'
+      );
     });
   });
 });

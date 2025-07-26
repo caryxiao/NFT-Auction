@@ -21,11 +21,11 @@ contract DDNFT is ERC721Upgradeable, OwnableUpgradeable {
         __Ownable_init(_initialOwner);
     }
 
-    function _baseURI() internal pure override returns (string memory) {
+    function _baseURI() internal pure virtual override returns (string memory) {
         return 'ipfs://bafybeid5ye5dcwff7qpltt7fte2worzsv4izzuq53l5n5hcbyupa26ypfm/';
     }
 
-    function safeMint(address to) external onlyOwner {
+    function safeMint(address to) public virtual onlyOwner {
         _tokenCounter += 1;
         uint256 tokenId = _tokenCounter;
         _safeMint(to, tokenId);
@@ -35,5 +35,9 @@ contract DDNFT is ERC721Upgradeable, OwnableUpgradeable {
         _requireOwned(tokenId);
         string memory baseURI = _baseURI();
         return bytes(baseURI).length > 0 ? string.concat(baseURI, 'DDNFT_', tokenId.toString(), '.json') : '';
+    }
+
+    function version() public pure virtual returns (string memory) {
+        return '1';
     }
 }
