@@ -1,73 +1,102 @@
 const js = require('@eslint/js');
+const typescript = require('@typescript-eslint/eslint-plugin');
+const typescriptParser = require('@typescript-eslint/parser');
 const prettier = require('eslint-plugin-prettier');
 const prettierConfig = require('eslint-config-prettier');
-const globals = require('globals');
 
 module.exports = [
-  // 基础推荐配置
   js.configs.recommended,
-
-  // Prettier 配置（必须在最后）
-  prettierConfig,
-
   {
-    // 全局配置
+    files: ['**/*.{js,ts}'],
     languageOptions: {
-      ecmaVersion: 2021,
-      sourceType: 'commonjs',
+      parser: typescriptParser,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+      },
       globals: {
-        ...globals.node,
-        ...globals.mocha,
-
-        // Hardhat 全局变量
-        hre: 'readonly',
-        ethers: 'readonly',
-        network: 'readonly',
-        artifacts: 'readonly',
-        web3: 'readonly',
+        console: 'readonly',
+        process: 'readonly',
+        Buffer: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        module: 'readonly',
+        require: 'readonly',
+        exports: 'readonly',
+        global: 'readonly',
       },
     },
-
     plugins: {
-      prettier,
+      '@typescript-eslint': typescript,
+      prettier: prettier,
     },
-
     rules: {
-      // Prettier 规则
+      ...typescript.configs.recommended.rules,
+      ...prettierConfig.rules,
       'prettier/prettier': 'error',
-
-      // ESLint 规则
-      'no-console': 'warn',
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-      'prefer-const': 'error',
-    },
-  },
-
-  {
-    // Hardhat 配置文件特殊处理
-    files: ['hardhat.config.js'],
-    languageOptions: {
-      globals: {
-        task: 'readonly',
-      },
-    },
-  },
-  {
-    // 允许测试文件使用 console
-    files: ['test/**/*.js', 'scripts/**/*.js', 'hardhat.config.js'],
-    rules: {
+      '@typescript-eslint/no-unused-vars': 'error',
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/explicit-module-boundary-types': 'off',
+      '@typescript-eslint/no-empty-function': 'warn',
       'no-console': 'off',
     },
   },
   {
-    // 忽略文件
+    files: ['**/*.test.{js,ts}', '**/test/**/*.{js,ts}'],
+    languageOptions: {
+      parser: typescriptParser,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+      },
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+        Buffer: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        module: 'readonly',
+        require: 'readonly',
+        exports: 'readonly',
+        global: 'readonly',
+        describe: 'readonly',
+        it: 'readonly',
+        before: 'readonly',
+        after: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+        expect: 'readonly',
+        assert: 'readonly',
+      },
+    },
+    plugins: {
+      '@typescript-eslint': typescript,
+      prettier: prettier,
+    },
+    rules: {
+      ...typescript.configs.recommended.rules,
+      ...prettierConfig.rules,
+      'prettier/prettier': 'error',
+      '@typescript-eslint/no-unused-vars': 'error',
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/explicit-module-boundary-types': 'off',
+      '@typescript-eslint/no-empty-function': 'warn',
+      'no-console': 'off',
+      '@typescript-eslint/no-unused-expressions': 'off',
+    },
+  },
+  {
     ignores: [
       'node_modules/',
+      'dist/',
+      'build/',
       'artifacts/',
       'cache/',
-      'coverage/',
-      'typechain/',
       'typechain-types/',
+      '**/*.sol',
+      'eslint.config.js',
     ],
   },
 ];

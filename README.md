@@ -71,6 +71,30 @@ npx hardhat deploy --tags ddnft,ddnftv2
 └── package.json    # 项目依赖
 ```
 
+
+### 支持的 upgrades 方法
+
+- **ERC1967 工具**: `getImplementationAddress()`, `getAdminAddress()`, `getBeaconAddress()`
+- **部署和升级**: `deployProxy()`, `upgradeProxy()`, `prepareUpgrade()`
+- **信标模式**: `deployBeacon()`, `deployBeaconProxy()`, `upgradeBeacon()`
+- **管理功能**: `admin.changeProxyAdmin()`, `admin.transferProxyAdminOwnership()`
+- **验证功能**: `validateImplementation()`, `validateUpgrade()`
+
+### 验证配置
+
+运行以下命令验证 TypeScript 配置是否正确：
+
+```bash
+# 编译检查
+npx hardhat compile
+
+# 运行测试
+npx hardhat test
+
+# 验证 upgrades 智能提示
+npx hardhat run scripts/test-upgrades-intellisense.ts
+```
+
 ## 下一步计划
 
 -   [ ] 开发 `NFTAuction.sol` 合约，实现完整的拍卖逻辑。
