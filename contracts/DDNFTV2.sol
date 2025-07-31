@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import './DDNFT.sol';
-import '@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol';
+import "./DDNFT.sol";
+import "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 
 contract DDNFTV2 is DDNFT, PausableUpgradeable {
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -27,6 +27,6 @@ contract DDNFTV2 is DDNFT, PausableUpgradeable {
     }
 
     function version() public pure virtual override returns (string memory) {
-        return '2';
+        return "2";
     }
 }

@@ -2,9 +2,9 @@
 // 已部署的测试地址: https://sepolia.etherscan.io/address/0x18303e1e6b11a7b6cf566bca5186b397e8b60fc6
 pragma solidity ^0.8.30;
 
-import '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
-import {Strings} from '@openzeppelin/contracts/utils/Strings.sol';
+import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 contract DDNFT is ERC721Upgradeable, OwnableUpgradeable {
     using Strings for uint256;
@@ -24,7 +24,7 @@ contract DDNFT is ERC721Upgradeable, OwnableUpgradeable {
     }
 
     function _baseURI() internal pure virtual override returns (string memory) {
-        return 'ipfs://bafybeid5ye5dcwff7qpltt7fte2worzsv4izzuq53l5n5hcbyupa26ypfm/';
+        return "ipfs://bafybeid5ye5dcwff7qpltt7fte2worzsv4izzuq53l5n5hcbyupa26ypfm/";
     }
 
     function safeMint(address to) public virtual onlyOwner {
@@ -37,10 +37,10 @@ contract DDNFT is ERC721Upgradeable, OwnableUpgradeable {
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
         _requireOwned(tokenId);
         string memory baseURI = _baseURI();
-        return bytes(baseURI).length > 0 ? string.concat(baseURI, 'DDNFT_', tokenId.toString(), '.json') : '';
+        return bytes(baseURI).length > 0 ? string.concat(baseURI, "DDNFT_", tokenId.toString(), ".json") : "";
     }
 
     function version() public pure virtual returns (string memory) {
-        return '1';
+        return "1";
     }
 }

@@ -8,6 +8,7 @@ module.exports = {
   bracketSpacing: true,
   arrowParens: 'avoid',
   endOfLine: 'lf',
+  plugins: ['prettier-plugin-solidity'],
   overrides: [
     {
       files: '*.sol',
