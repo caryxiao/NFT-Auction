@@ -5,25 +5,34 @@ import { HardhatUserConfig } from 'hardhat/config';
 import * as fs from 'fs';
 import * as dotenv from 'dotenv';
 
-// 根据 NODE_ENV 自动选择 .env 文件
+// 根据 NODE_ENV 自动选择 .env 文件，如果不存在则回退到 .env
 const envFile = `.env.${process.env.NODE_ENV || 'development'}`;
 if (fs.existsSync(envFile)) {
   dotenv.config({ path: envFile });
 } else {
   console.warn(`环境文件 ${envFile} 不存在，使用默认 .env`);
-  dotenv.config();
+  dotenv.config({ path: '.env' });
 }
 
-const { INFURA_API_KEY, PRIVATE_KEY } = process.env;
+const { SEPOLIA_RPC_URL, PRIVATE_KEY, ETHERSCAN_API_KEY } = process.env;
 console.log('当前环境:', process.env.NODE_ENV || 'development');
 
 const config: HardhatUserConfig = {
   solidity: '0.8.30',
   networks: {
-    sepolia: {
-      url: `https://sepolia.infura.io/v3/${INFURA_API_KEY}`,
-      accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
+    // 本地开发网络
+    hardhat: {
+      chainId: 31337,
     },
+    // Sepolia 测试网
+    sepolia: {
+      url: SEPOLIA_RPC_URL || '',
+      accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
+      chainId: 11155111,
+    },
+  },
+  etherscan: {
+    apiKey: ETHERSCAN_API_KEY || '',
   },
   namedAccounts: {
     deployer: 0,
@@ -31,12 +40,6 @@ const config: HardhatUserConfig = {
     user2: 2,
     user3: 3,
     user4: 4,
-    user5: 5,
-    user6: 6,
-    user7: 7,
-    user8: 8,
-    user9: 9,
-    user10: 10,
   },
   typechain: {
     outDir: 'typechain-types',
