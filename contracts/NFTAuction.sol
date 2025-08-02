@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import "@chainlink/contracts/src/v0.8/shared/mocks/MockV3Aggregator.sol";
 
 /**
  * @title NFTAuction
@@ -54,6 +55,8 @@ contract NFTAuction is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
     error InvalidERC721Contract(address contractAddr);
     // 无效的价格预言机
     error InvalidPriceFeed(address priceFeed);
+    // 价格预言机过期
+    error PriceFeedStale(address feedAddr, uint256 updatedAt, uint256 threshold);
     // 无效的价格
     error InvalidStalePrice(address feedAddr, int256 price, uint256 updatedAt, uint256 threshold);
     // 无效的心跳阈值
@@ -66,6 +69,8 @@ contract NFTAuction is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
     error InvalidBidder(address bidder, address highestBidder);
     // 转账失败
     error TransferFailed(address to, uint256 amount);
+    // 无效的提现金额
+    error InvalidWithdrawAmount(address bidder, address tokenAddr, uint256 amount);
     // 提现
     event Withdraw(address indexed bidder, address indexed tokenAddr, uint256 amount);
     // 价格预言机更新
@@ -77,11 +82,23 @@ contract NFTAuction is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
 
     /**
      * @dev 初始化合约
+     * @param _owner 合约所有者
+     * @param _nft nft合约地址
+     * @param _tokenId nft tokenId
+     * @param _startPrice 起拍价
+     * @param _duration 持续时间
      */
-    function initialize(address _nft, uint256 _tokenId, uint256 _startPrice, uint256 _duration) public initializer {
-        __Ownable_init(msg.sender);
+    function initialize(
+        address _owner,
+        address _seller,
+        address _nft,
+        uint256 _tokenId,
+        uint256 _startPrice,
+        uint256 _duration
+    ) public initializer {
+        __Ownable_init(_owner);
         __UUPSUpgradeable_init();
-        _createAuction(_nft, _tokenId, _startPrice, _duration);
+        _createAuction(_seller, _nft, _tokenId, _startPrice, _duration);
     }
 
     /**
@@ -96,12 +113,19 @@ contract NFTAuction is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
 
     /**
      * @dev 创建拍卖
+     * @param _seller 卖家地址
      * @param _nft nft合约地址
      * @param _tokenId nft tokenId
      * @param _startPrice 起拍价
      * @param _duration 持续时间
      */
-    function _createAuction(address _nft, uint256 _tokenId, uint256 _startPrice, uint256 _duration) internal virtual {
+    function _createAuction(
+        address _seller,
+        address _nft,
+        uint256 _tokenId,
+        uint256 _startPrice,
+        uint256 _duration
+    ) internal virtual {
         // 检查起拍价是否大于0
         if (_startPrice <= 0) {
             revert InvalidStartPrice(_startPrice);
@@ -117,13 +141,10 @@ contract NFTAuction is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
             revert InvalidERC721Contract(_nft);
         }
 
-        // 将要拍卖的token转移到当前合约
-        IERC721(_nft).safeTransferFrom(msg.sender, address(this), tokenId);
-
         // 初始化拍卖信息
         nft = IERC721(_nft);
         tokenId = _tokenId;
-        seller = msg.sender;
+        seller = _seller;
         startTime = block.timestamp;
         startPrice = _startPrice;
         duration = _duration;
@@ -134,10 +155,7 @@ contract NFTAuction is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
      * @param _tokenAddr 代币地址
      * @param _priceFeed 价格预言机地址
      */
-    function setPriceFeeds(address _tokenAddr, address _priceFeed, uint256 _threshold) external virtual onlyOwner {
-        if (_tokenAddr == address(0)) {
-            revert InvalidTokenAddress(_tokenAddr);
-        }
+    function setPriceFeed(address _tokenAddr, address _priceFeed, uint256 _threshold) external virtual onlyOwner {
         if (_priceFeed == address(0)) {
             revert InvalidPriceFeed(_priceFeed);
         }
@@ -147,9 +165,15 @@ contract NFTAuction is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         }
 
         // 检查价格预言机是否有效
-        try AggregatorV3Interface(_priceFeed).version() returns (uint256 version) {
-            if (version == 0) {
-                revert InvalidPriceFeed(_priceFeed);
+        try AggregatorV3Interface(_priceFeed).latestRoundData() returns (
+            uint80 /*roundId*/,
+            int256 /*answer*/,
+            uint256 /*startedAt*/,
+            uint256 updatedAt,
+            uint80 /*answeredInRound*/
+        ) {
+            if (block.timestamp - updatedAt > _threshold) {
+                revert PriceFeedStale(_priceFeed, updatedAt, _threshold);
             }
         } catch {
             revert InvalidPriceFeed(_priceFeed);
@@ -185,9 +209,9 @@ contract NFTAuction is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
             // 如果之前有人出价，则将之前出价者的钱写入withdrawals
             if (highestAmount > 0) {
                 if (highestBidPayment == PaymentType.ETH) {
-                    withdrawals[highestBidder][address(0)] += highestAmount;
+                    withdrawals[highestBidder][address(0)] += highestBidOriginalAmount;
                 } else {
-                    withdrawals[highestBidder][_tokenAddress] += highestBidOriginalAmount;
+                    withdrawals[highestBidder][highestBidTokenAddr] += highestBidOriginalAmount;
                 }
             }
 
@@ -298,11 +322,11 @@ contract NFTAuction is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
 
         // 如果最高出价者不为空, 则将最高出价者的钱写入withdrawals
         if (highestBidder != address(0)) {
-            // 将最高出价者的钱写入withdrawals
+            // 将最高出价者的钱写入卖家的提现地址
             if (highestBidPayment == PaymentType.ETH) {
-                withdrawals[highestBidder][address(0)] += highestAmount;
+                withdrawals[seller][address(0)] += highestBidOriginalAmount;
             } else {
-                withdrawals[highestBidder][highestBidTokenAddr] += highestBidOriginalAmount;
+                withdrawals[seller][highestBidTokenAddr] += highestBidOriginalAmount;
             }
             emit AuctionEnded(highestBidder, highestAmount, highestBidPayment, highestBidOriginalAmount);
         }
@@ -331,17 +355,22 @@ contract NFTAuction is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
     /**
      * @dev 提现
      */
-    function withdraw(address _tokenAddress) external virtual nonReentrant {}
+    function withdraw(address _tokenAddress) external virtual nonReentrant {
+        // 检查拍卖是否结束
+        if (!ended) {
+            revert InvalidAuctionState();
+        }
+        _withdraw(_tokenAddress);
+    }
 
     /**
      * @dev 提现
      */
     function _withdraw(address _tokenAddress) internal virtual {
-        // 检查拍卖是否结束
-        if (!ended) {
-            revert InvalidAuctionState();
-        }
         uint256 amount = withdrawals[msg.sender][_tokenAddress];
+        if (amount == 0) {
+            revert InvalidWithdrawAmount(msg.sender, _tokenAddress, amount);
+        }
         withdrawals[msg.sender][_tokenAddress] = 0;
         if (_tokenAddress == address(0)) {
             (bool success, ) = msg.sender.call{value: amount}("");
