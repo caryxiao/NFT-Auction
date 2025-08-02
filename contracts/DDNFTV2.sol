@@ -22,8 +22,8 @@ contract DDNFTV2 is DDNFT, PausableUpgradeable {
         _unpause();
     }
 
-    function safeMint(address to) public virtual override onlyOwner whenNotPaused {
-        super.safeMint(to);
+    function safeMint(address to) public virtual override onlyOwner whenNotPaused returns (uint256) {
+        return super.safeMint(to);
     }
 
     function version() public pure virtual override returns (string memory) {

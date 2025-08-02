@@ -6,7 +6,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 import "@chainlink/contracts/src/v0.8/shared/mocks/MockV3Aggregator.sol";
 
@@ -14,14 +14,14 @@ import "@chainlink/contracts/src/v0.8/shared/mocks/MockV3Aggregator.sol";
  * @title NFTAuction
  * @notice 拍卖合约, 拍卖NFT, 支持ETH和ERC20代币出价, 合约是以USD为单位的拍卖合约, 出价都需要转换为USD进行对比价格
  */
-contract NFTAuction is Initializable, UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuard {
+contract NFTAuction is Initializable, UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     // 最小持续时间
     uint256 public constant MIN_DURATION = 60;
     enum PaymentType {
         ETH,
         ERC20
     }
-
+    uint256 public version;
     IERC721 public nft; // nft合约
     uint256 public tokenId; //拍卖的Token ID
     address public seller; //卖家
@@ -95,9 +95,22 @@ contract NFTAuction is Initializable, UUPSUpgradeable, OwnableUpgradeable, Reent
         uint256 _tokenId,
         uint256 _startPrice,
         uint256 _duration
-    ) public initializer {
+    ) public virtual initializer {
+        __NFTAuction_init(_owner, _seller, _nft, _tokenId, _startPrice, _duration);
+        version = 1;
+    }
+
+    function __NFTAuction_init(
+        address _owner,
+        address _seller,
+        address _nft,
+        uint256 _tokenId,
+        uint256 _startPrice,
+        uint256 _duration
+    ) internal onlyInitializing {
         __Ownable_init(_owner);
         __UUPSUpgradeable_init();
+        __ReentrancyGuard_init();
         _createAuction(_seller, _nft, _tokenId, _startPrice, _duration);
     }
 

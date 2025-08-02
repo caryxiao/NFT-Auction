@@ -58,6 +58,60 @@ const deployNFTAuction: DeployFunction = async function (
 
     log('----------------------------------------------------');
     log('🎉 部署完成！');
+    log('----------------------------------------------------');
+
+    log('6. 创建一个新的拍卖实例...');
+    const ddnft = await ethers.getContractAt(
+      'DDNFT',
+      (await deployments.get('DDNFTProxy')).address,
+      deployerSigner
+    );
+
+    // 铸造一个 NFT 用于测试
+    const mintTx = await ddnft.safeMint(deployer);
+    await mintTx.wait();
+    log('   ✅ NFT 铸造成功, tokenId: 1');
+
+    // 授权 NFT 给工厂
+    const tx = await ddnft.approve(nftAuctionFactoryAddress, 1);
+    await tx.wait();
+    log('   ✅ NFT 授权成功');
+
+    // 创建拍卖
+    const createAuctionTx = await nftAuctionFactoryProxy.createAuction(
+      await ddnft.getAddress(),
+      1,
+      ethers.parseEther('0.1'),
+      3600
+    );
+    const receipt = await createAuctionTx.wait();
+
+    // 从事件中获取新创建的代理地址
+    const event = receipt?.logs?.find(
+      log =>
+        log.address === nftAuctionFactoryAddress &&
+        log.eventName === 'AuctionCreated'
+    );
+    const newAuctionProxyAddress = event?.args?.auctionAddress;
+
+    if (newAuctionProxyAddress) {
+      log(`   ✅ 新拍卖代理创建成功: ${newAuctionProxyAddress}`);
+
+      log('7. 升级新的拍卖代理...');
+      const NFTAuctionV2 = await ethers.getContractFactory('NFTAuctionV2');
+      const upgraded = await upgrades.upgradeProxy(
+        newAuctionProxyAddress,
+        NFTAuctionV2
+      );
+      await upgraded.waitForDeployment();
+      const upgradedAddress = await upgraded.getAddress();
+      log('   ✅ 升级成功！');
+      log(
+        `   新实现合约地址: ${await upgrades.erc1967.getImplementationAddress(
+          upgradedAddress
+        )}`
+      );
+    }
   } catch (error) {
     log(`   ❌ 部署失败: ${error}`);
     throw error;
@@ -65,6 +119,6 @@ const deployNFTAuction: DeployFunction = async function (
 };
 
 deployNFTAuction.tags = ['nft-auction'];
-deployNFTAuction.dependencies = [];
+deployNFTAuction.dependencies = ['ddnft'];
 
 export default deployNFTAuction;

@@ -29,11 +29,12 @@ contract DDNFT is ERC721Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradea
         return "ipfs://bafybeid5ye5dcwff7qpltt7fte2worzsv4izzuq53l5n5hcbyupa26ypfm/";
     }
 
-    function safeMint(address to) public virtual onlyOwner nonReentrant {
+    function safeMint(address to) public virtual onlyOwner nonReentrant returns (uint256) {
         _tokenCounter += 1;
         uint256 tokenId = _tokenCounter;
         _safeMint(to, tokenId);
         emit Mint(to, tokenId); // 触发 Mint 事件
+        return tokenId;
     }
 
     function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {

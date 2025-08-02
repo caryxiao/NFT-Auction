@@ -18,8 +18,8 @@ describe('NFT Auction Test', () => {
   let priceFeed1: any;
   let priceFeed2: any;
   let ddt: any; // 测试使用的代币
-  const nftTokenId1 = 1;
-  const nftTokenId2 = 2;
+  let nftTokenId1;
+  let nftTokenId2;
 
   beforeEach(async () => {
     await deployments.fixture(['mocks', 'ddnftv2', 'nft-auction']);
@@ -72,9 +72,13 @@ describe('NFT Auction Test', () => {
     let auction1Address: string;
     let auction1: any;
     beforeEach(async () => {
-      // 创建2个NFT
-      await ddnft.safeMint(sellerAddress);
-      await ddnft.safeMint(sellerAddress);
+      // 创建2个NFT, 通过log获取tokenId
+      const tx1 = await ddnft.safeMint(sellerAddress);
+      const receipt1 = await tx1.wait();
+      nftTokenId1 = receipt1.logs[0].args.tokenId;
+      const tx2 = await ddnft.safeMint(sellerAddress);
+      const receipt2 = await tx2.wait();
+      nftTokenId2 = receipt2.logs[0].args.tokenId;
 
       // 授权NFT给工厂合约
       await ddnft

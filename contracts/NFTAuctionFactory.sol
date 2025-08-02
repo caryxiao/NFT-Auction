@@ -15,12 +15,14 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
  * @notice 客户需要先把token授权给NFT AucFactory, NFT AucFactory 将NFT 发送到代理合约, 然后代理合约将NFT 发送到拍卖合约
  */
 contract NFTAuctionFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
-    address public implementation;
+    address public logicImplementation;
+    uint256 public version;
     mapping(address seller => address[] auctions) public auctionList;
 
     event AuctionCreated(address indexed seller, address indexed auction);
 
     error InvalidSeller(address seller);
+    error InvalidAddress(address addr);
 
     // 只有卖家可以创建拍卖
     modifier onlySeller() {
@@ -32,13 +34,30 @@ contract NFTAuctionFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable
 
     /**
      * @dev 初始化工厂
-     * @param _implementation 拍卖合约地址
+     * @param _logicImplementation 拍卖合约地址
      */
-    function initialize(address _implementation) public initializer {
+    function initialize(address _logicImplementation) public initializer {
+        __NFTAuctionFactory_init(_logicImplementation);
+        version = 1;
+    }
+
+    function __NFTAuctionFactory_init(address _logicImplementation) internal onlyInitializing {
         __Ownable_init(msg.sender);
         __UUPSUpgradeable_init();
         __ReentrancyGuard_init();
-        implementation = _implementation;
+        _setLogicImplementation(_logicImplementation);
+    }
+
+    function setLogicImplementation(address _logicImplementation) external onlyOwner {
+        _setLogicImplementation(_logicImplementation);
+    }
+
+    /**
+     * @dev 设置拍卖合约地址
+     * @param _logicImplementation 拍卖合约地址
+     */
+    function _setLogicImplementation(address _logicImplementation) internal {
+        logicImplementation = _logicImplementation;
     }
 
     /**
@@ -67,7 +86,7 @@ contract NFTAuctionFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable
             _duration
         );
         // 创建代理合约
-        address proxy = address(new ERC1967Proxy(implementation, _initData));
+        address proxy = address(new ERC1967Proxy(logicImplementation, _initData));
         // 将NFT从工厂合约发送到代理合约
         IERC721(_nft).safeTransferFrom(address(this), proxy, _tokenId);
         // 将拍卖合约地址添加到卖家拍卖列表中
@@ -80,8 +99,10 @@ contract NFTAuctionFactory is Initializable, UUPSUpgradeable, OwnableUpgradeable
      * @dev 授权升级
      * @param newImplementation 新合约地址
      */
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {
-        implementation = newImplementation;
+    function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {
+        if (address(newImplementation) == address(0)) {
+            revert InvalidAddress(address(0));
+        }
     }
 
     /**
