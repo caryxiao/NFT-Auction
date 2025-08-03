@@ -18,8 +18,8 @@ describe('NFT Auction Test', () => {
   let priceFeed1: any;
   let priceFeed2: any;
   let ddt: any; // 测试使用的代币
-  let nftTokenId1;
-  let nftTokenId2;
+  let nftTokenId1: number;
+  let nftTokenId2: number;
 
   beforeEach(async () => {
     await deployments.fixture(['mocks', 'ddnftv2', 'nft-auction']);
