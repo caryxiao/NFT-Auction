@@ -18,7 +18,7 @@ const { SEPOLIA_RPC_URL, PRIVATE_KEY, ETHERSCAN_API_KEY } = process.env;
 console.log('当前环境:', process.env.NODE_ENV || 'development');
 
 const config: HardhatUserConfig = {
-  solidity: '0.8.30',
+  solidity: '0.8.28',
   networks: {
     // 本地开发网络
     hardhat: {
@@ -29,6 +29,7 @@ const config: HardhatUserConfig = {
       url: SEPOLIA_RPC_URL || '',
       accounts: PRIVATE_KEY ? [PRIVATE_KEY] : [],
       chainId: 11155111,
+      // gasPrice: 2_000_000_000, // 2 Gwei
     },
   },
   etherscan: {
